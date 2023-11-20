@@ -19,7 +19,7 @@ npm install fs
 
 # Setup:
 
-Clone API:            git clone https://github.com/wwiegel/csafApi.git
+Clone the API `git clone https://github.com/wwiegel/csafApi.git`.
 
 Change configuration (logging parts and connection strings) with `nano ./csafApi/config.js`:
                       
@@ -32,4 +32,9 @@ csafElasticsearch.port
 csafElasticsearch.user
 csafElasticsearch.password
 csafElasticsearch.logFile
+```
+
+# Run:
+```
+node ./csafApi/server_V20.js
 ```

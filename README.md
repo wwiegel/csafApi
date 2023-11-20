@@ -5,8 +5,7 @@ This is a GraphQL-based API with which CSAF documents can be retrieved from a da
 The CSAF API was developed as part of a master's thesis
 (https://www.fernuni-hagen.de/pv/docs/wiegel-abschlussarbeit.pdf).
 
-# Prerequisites:
-
+# Prerequisites
 This API assumes that an Elasticsearch database is already running and has an index that is filled with CSAF documents.
 In addition, the following software packages are required to operate the API:
 ```
@@ -17,8 +16,7 @@ npm install graphql-depth-limit
 npm install fs
 ```
 
-# Setup:
-
+# Setup
 Clone the API `git clone https://github.com/wwiegel/csafApi.git`.
 
 Change configuration (logging parts and connection strings) with `nano ./csafApi/config.js`:
@@ -34,7 +32,9 @@ csafElasticsearch.password
 csafElasticsearch.logFile
 ```
 
-# Run:
+# Run
+Because of the relative paths, you have to change to the main API directory to run the API:
 ```
-node ./csafApi/server_V20.js
+cd ./csafApi
+node ./server_V20.js
 ```

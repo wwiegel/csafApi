@@ -27,14 +27,28 @@ const logger = require("./logger");
 function generateJsonPathFromContextLoop(context_path){
     var path = "/" + context_path.key;
 
-    //ignore !CSAF parts
-    // TODO context_path.key == "csafApi" (streichen, da durch context_path.typename abgedeckt)
-    if( context_path.key == "csafApi" ||
-        context_path.typename == "Query" ||
-        context_path.key == "documents"){
-            path = "";
+    // ignore CSAF-API and additional array layers
+    if( context_path.typename == "Query" ||
+        context_path.typename == "csafApi" ||
+        context_path.typename == "csafApiPlatypus" ||
+        context_path.typename == "csafResultsMetadata" ||
+        context_path.typename == "csafOriginalDocuments" ||
+        context_path.typename == "csafApiPlatypusSearchCriteria" ||
+        context_path.typename == "csafApiXor" ||
+        context_path.typename == "csafApiPlatypusSpecialFilter" ||
+        context_path.typename == "csafApiPlatypusSpecialFilterRelation" ||
+        context_path.typename == "csafApiPlatypusFilterCriteria" ||
+        context_path.typename == "csafApiMust" ||
+        context_path.typename == "csafApiMustNot" ||
+        context_path.typename == "csafApiShould" ||
+        //context_path.typename == "csafDocument" ||
+        context_path.typename == "queryROLIE" 
+        ){
+        path = "";
+    }else if(!context_path.typename){
+        // undefined, because array layer
+        path = "";
     }
-    if(!context_path.typename){path = "";}
 
     // if there is a next, then root is not yet reached
     if (context_path.prev){
@@ -91,6 +105,12 @@ function generateJsonPathFromContextLoop(context_path){
  * 
  */
 module.exports = {
+
+    /**
+     * Here is the main API resolver for the CSAF API,
+     * followed by the filter resolver.
+     */
+
     Query: {
         /**
          * 
@@ -115,12 +135,16 @@ module.exports = {
         ).catch(e => {
             console.error(e);
             logger.log("resolver", e);
-        }),
-
-        /*csafDocumentsFromDeviceList: () => {
-            return 'Hello world 2!';
-        }*/
+        })
     },
+
+
+    /**
+     * Filter resolver (array filter) for the CSAF API.
+     * Filters are only partially implemented for basic types (String, Int, Float, Boolean, and ID).
+     * Filters can also be applied to complex objects, but this is not implemented.
+     */
+
     /* 
         type csafDocument {
             document: csafDocumentDocument

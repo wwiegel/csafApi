@@ -20,11 +20,19 @@ class logger {
         var todayDate = new Date().toISOString(); //.slice(0, 10);
         var newLogString = todayDate + ": " + logString + "\r\n";
         if(logInstance == "elasticsearch"){
-            fs.promises.writeFile(config.csafElasticsearch.logFile, "");
+            fs.promises.writeFile(config.csafElasticsearch.logFile, newLogString, { flag: 'a' }, function (err) {
+                if (err) throw err;
+                console.log("elasticsearch logged!");
+            });
+        }else if(logInstance == "intermediate"){
+            fs.promises.writeFile(config.csafIntermediate.logFile, newLogString, { flag: 'a' }, function (err) {
+                if (err) throw err;
+                console.log("intermediate logged!");
+            });
         }else{
             fs.writeFile(config.csafServer.logFile, newLogString, { flag: 'a' }, function (err) {
                 if (err) throw err;
-                console.log("It's saved!");
+                console.log("logged!");
             });
         }
     

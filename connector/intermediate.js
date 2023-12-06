@@ -1,38 +1,41 @@
 const config = require("../config");
 const connector = require(config.csafIntermediate.connector);
-
+const logger = require("../logger");
 var fs = require('fs');
+
+// document path to the original CSAF documents on the filesystem,
+// read access is required for the user running the CSAF API.
 const csafDocumentsPath = "./csaf-aggregator/white";
+
+// TODO: Bind accounts as a service request.
 const { accounts } = require("../data/accounts");
+
+// Variables for GraphQL context caching
 var originalContext ={}; //csafApi
 var originalCsafApiFilter ={}; //csafApi
 var originalCsafApiShow ={}; //csafApi
 
 /**
- * TODO: später übersetzen
- * Der Intermediate ist zuständig für folgende Dinge:
- * 1: Zugangsberechtigung prüfen
- * 2: Manipulationen an der GraphQL Query zu verwalten
- * 2.1: Original merken
- * 2.2: Für die Ausgabe manipulieren
- * 2.3: und bei Bedarf Original wieder herstellen
- * 3: Den vorgegebenen Connector verwenden
+ * The Intermediate is responsible for the following:
+ * 1: Checking access authorization
+ * 2: Manipulation of the GraphQL query
+ * 2.1: caching the original context
+ * 2.2: reduce the GraphQL context to a intermediate version
+ * 2.3: normalizing the intermediate version of the context
+ * 2.3: manipulating the response, through context manipulation
+ * 2.4: and restore original context if required
+ * 3: Integration of the database connector
+ * 4: Including/appending original CSAF from filesystem to the response
  * @param {*} context 
  * @param {*} args 
  * @returns 
  */
 function Intermediate(context, args){
-    //reduce GraphQL JSON to a minimum
-    //var reducedGraphQlQuery = reduceGraphQl(context);
 
-    //check user
+    //fetch user, if user exists
     var userData = checkUser(args);
-        //var token = userData.token;
-        //var tlp_levels = userData.tlp_levels;
-        //var authentified = userData.authentified;
-        //var account = userData.account;
 
-    //cache the context because it will be manipulated
+    //cache the GraphQL context, because it will be manipulated
     var alias = cacheContext(context);
     let workContext = JSON.parse(JSON.stringify(originalContext[alias]));
     //if the documents element exist, the api user wishes to see only defined elements
@@ -58,6 +61,7 @@ function Intermediate(context, args){
     //requester entitles to further documents.
     workContext = authentification(workContext, userData);
 
+    //reduce GraphQL JSON to a minimum
     var intermediateObject = createIntermediateObjectV2(workContext);
     //intermediateObject['table'] = createIntermediateObjectTable(intermediateObject);
 
@@ -228,152 +232,62 @@ function authentification(context, userData){
     return context;
 }
 
+/**
+ * This function generates a GraphQL query for quering tlp labes.
+ * Only tlp labels were queried, the user is permitted to.
+ * @param {user account information, e.g. permitted TLP label} userData 
+ * @returns 
+ */
 function generateTlpLabelSelections(userData){
-    var tlpLabelSelections = [];  
+    var tlpLabelSelections_V2 = [];  
 
+    // If user is authentified, then use the permitted TLP labels, else only default TLP label is permitted
     if(userData.authentified){
         let i = 0;
         while(i<userData.tlp_levels.length){
-            tlpLabelSelections[tlpLabelSelections.length] ={
-                "arguments":[],
-                "directives":[],
-                "kind": "Field",
-                "name":{
-                    "kind": "Name",
-                    "value": "document"
-                },
-                "selectionSet": {
-                    "kind": "SelectionSet",
-                    "selections": [
-                        {
-                            "arguments":[],
-                            "directives":[],
-                            "kind": "Field",
-                            "name":{
-                                "kind": "Name",
-                                "value": "distribution"
-                            },
-                            "selectionSet": {
-                                "kind": "SelectionSet",
-                                "selections": [
-                                    {
-                                        "arguments":[],
-                                        "directives":[],
-                                        "kind": "Field",
-                                        "name":{
-                                            "kind": "Name",
-                                            "value": "tlp"
-                                        },
-                                        "selectionSet": {
-                                            "kind": "SelectionSet",
-                                            "selections": [
-                                                {
-                                                    "arguments":[
-                                                    {
-                                                            "kind": "Argument",
-                                                            "name":{
-                                                                "kind": "Name",
-                                                                "value": "exact"
-                                                            },
-                                                            "value":{
-                                                                "kind": "EnumValue",
-                                                                "value": userData.tlp_levels[i].tlpLabel
-                                                            } 
-                                                    } 
-                                                    ],
-                                                    "directives":[],
-                                                    "kind": "Field",
-                                                    "name":{
-                                                        "kind": "Name",
-                                                        "value": "label"
-                                                    }
-                                                    //,"selectionSet": {
-                                                    //    "kind": "SelectionSet",
-                                                    //    "selections": []
-                                                    //}
-                                                }
-                                            ]
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    ]
-                }
-            };
+            tlpLabelSelections_V2[tlpLabelSelections_V2.length] = generateTlpLabelGraphqlQuery(userData.tlp_levels[i].tlpLabel);
             i++;
         }
     } else {
-        tlpLabelSelections[tlpLabelSelections.length] ={
-            "arguments":[],
-            "directives":[],
-            "kind": "Field",
-            "name":{
-                "kind": "Name",
-                "value": "document"
-            },
-            "selectionSet": {
-                "kind": "SelectionSet",
-                "selections": [
-                    {
-                        "arguments":[],
-                        "directives":[],
-                        "kind": "Field",
-                        "name":{
-                            "kind": "Name",
-                            "value": "distribution"
-                        },
-                        "selectionSet": {
-                            "kind": "SelectionSet",
-                            "selections": [
-                                {
-                                    "arguments":[],
-                                    "directives":[],
-                                    "kind": "Field",
-                                    "name":{
-                                        "kind": "Name",
-                                        "value": "tlp"
-                                    },
-                                    "selectionSet": {
-                                        "kind": "SelectionSet",
-                                        "selections": [
-                                            {
-                                                "arguments":[
-                                                {
-                                                        "kind": "Argument",
-                                                        "name":{
-                                                            "kind": "Name",
-                                                            "value": "exact"
-                                                        },
-                                                        "value":{
-                                                            "kind": "EnumValue",
-                                                            "value": config.csafIntermediate.defaultTLP
-                                                        } 
-                                                } 
-                                                ],
-                                                "directives":[],
-                                                "kind": "Field",
-                                                "name":{
-                                                    "kind": "Name",
-                                                    "value": "label"
-                                                }
-                                                //,"selectionSet": {
-                                                //    "kind": "SelectionSet",
-                                                //    "selections": []
-                                                //}
-                                            }
-                                        ]
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
-        };
+        tlpLabelSelections_V2[tlpLabelSelections_V2.length] = generateTlpLabelGraphqlQuery(config.csafIntermediate.defaultTLP);
     }
 
-    return tlpLabelSelections;
+    return tlpLabelSelections_V2;
+}
+
+function generateTlpLabelGraphqlQuery(tlpLabel){
+    // /document/distribution/tlp/label
+    var tlpLabelPermission = {
+        arguments:[], directives:[], kind: "Field",
+        name:{ kind: "Name", value: "document" },
+        selectionSet: {
+            kind: "SelectionSet",
+            selections: [{
+                arguments:[], directives:[], kind: "Field",
+                name:{ kind: "Name", value: "distribution" },
+                selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [{
+                        arguments:[], directives:[], kind: "Field",
+                        name:{ kind: "Name", value: "tlp" },
+                        selectionSet: {
+                            kind: "SelectionSet",
+                            selections: [{
+                                arguments:[{
+                                        kind: "Argument",
+                                        name: { kind: "Name",      value: "exact" },
+                                        value:{ kind: "EnumValue", value: tlpLabel} 
+                                }],
+                                directives:[], kind: "Field",
+                                name:{ kind: "Name", value: "label" }
+                            }]
+                        }
+                    }]
+                }
+            }]
+        }
+    };
+    return tlpLabelPermission;
 }
 
 function getIntermediateOriginalCsafApiFilter(){
@@ -387,7 +301,7 @@ function getSearchArguments(intermediateObject){
         let i = 0;
         while (i < intermediateObject.subElements.length){
             if(!intermediateObject.subElements[i]){
-                var stop = true;
+                logger.log("intermediate", "This case should not happen. Sub element of intermideate object does not exist.");
             }
             var temp = getSearchArguments(intermediateObject.subElements[i]);
             let j = 0;
@@ -563,9 +477,24 @@ function pathValidation(paths){
     let i = 0;
     while(i<paths.length){
         if(paths[i].name == "path"){
+            // TODO: The list of valid paths is not complete
+            // paths like "/document/title" are valid, but could be reached by using the normal exist funcionallity, 
+            // because they are leafs at the CSAF tree. 
+            // existp functionallity was added for paths which are nodes (no leafs) and could not reached else where.
             if(
                 paths[i].path == "/document" ||
-                paths[i].path == "/document/title" ||
+                paths[i].path == "/document/acknowledgments" ||
+                paths[i].path == "/document/aggregate_severity" ||
+                //paths[i].path == "/document/category" ||
+                //paths[i].path == "/document/csaf_version" ||
+                paths[i].path == "/document/distribution" ||
+                //paths[i].path == "/document/lang" ||
+                paths[i].path == "/document/notes" ||
+                paths[i].path == "/document/publisher" ||
+                paths[i].path == "/document/references" ||
+                //paths[i].path == "/document/source_lang" ||
+                // paths[i].path == "/document/title" ||
+                paths[i].path == "/document/tracking" ||
                 paths[i].path == "/document/tracking/revision_history/date" ||
                 paths[i].path == "/document/lang" ||
                 paths[i].path == "/product_tree" ||
@@ -586,13 +515,16 @@ function pathValidation(paths){
             ){
                 validPaths[validPaths.length] = paths[i]; 
             } else {
-                console.error("API8:2019 - Injection or unvalid path ###  path = " + paths[i].path);
+                logger.log("intermediate", "OWASP:API8:2019 - existp path is not valid or not permitted: " + paths[i].path);
+                //console.error("API8:2019 - Injection or unvalid path ###  path = " + paths[i].path);
+
+                // because the path is not valid, set a default valid path
                 paths[i].path = "/document";
                 paths[i].value = "/document";
                 validPaths[validPaths.length] = paths[i]; 
             } 
         } else {
-            //isn't a path, is an other argument
+            // it is not a path argument, ignore it, it is an other argument
             validPaths[validPaths.length] = paths[i]; 
         } 
         i++;
@@ -631,9 +563,9 @@ function harmonizeIntermediateObjects(intermediateObject, graphQlContext){
 
     if(intermediateObject.name == "exist"){
         intermediateObject.name = "existp";
-        //Die Argumente werden erst später im Prozess erzeugt,
-        //daher muss hier der GraphQL Kontext manipuliert werden,
-        //damit daraus die richtigen Attribute generiert werden
+        //The arguments are only generated later in the process,
+        //Therefore the GraphQL context must be manipulated here,
+        //so that the correct attributes are generated from it
         let newExistpArguments = createExistpArguments(graphQlContext);
         graphQlContext.arguments[graphQlContext.arguments.length] ={
             kind: "Argument",
@@ -921,8 +853,8 @@ function createIntermediateObject(graphQlContext, parent){
 
 /**
  * This function gets the current GraphQL context. 
- * If the context is unmanipulated, then it is cached 
- * under the alias of the query.
+ * If the context is unmanipulated, if it is the original context, 
+ * then it is cached under the alias of the query.
  * @param {actual given context} context 
  * @returns the alias of the query
  */
@@ -967,6 +899,8 @@ function cacheContext(context){
 
 function checkUser(args){
     var token = args.token ? args.token : "";
+
+    // TODO: rename to permitted tlp label: permitted_tlp_label
     var tlp_levels = [];
     var authentified = false;
     var account = {};
@@ -981,8 +915,13 @@ function checkUser(args){
             }
             i++;
         }
-        // TODO: API10:2019 Insufficient Logging & Monitoring
-        // Unbekannte Token können als Angriffsversuch geloggt werden.
+
+        // API10:2019 Insufficient Logging & Monitoring
+        // Unknown tokens can be logged as an attack attempt.
+        if (!authentified && token.length > 0) {
+            //Logging
+            logger.log("intermediate", "OWASP:API10:2019 - Token does not exist: " + token);
+        }
     }
 
     return {

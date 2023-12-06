@@ -23,7 +23,7 @@ module.exports = {
         defaultTLP: "WHITE",
         branchesMaxDepth: 3,
         defaultMaxDocuments: 10,
-        logFile: "./logs/intermediate.log"
+        logFile: "./csaf_api/logs/intermediate.log"
     },
     csafElasticsearch:  {
         elasticsearchIndex: "csaf_documents",
@@ -33,7 +33,7 @@ module.exports = {
         user: "elastic",
         password: "40f=RlDDqxldfx-fDv-9",
         maxPreQuerySize: 10000,
-        logFile: "./logs/elasticsearch.log"
+        logFile: "./csaf_api/logs/elasticsearch.log"
     },
     csafMysql:  {
         requestTimeout: 30000,

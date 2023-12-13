@@ -294,6 +294,13 @@ function getIntermediateOriginalCsafApiFilter(){
     return originalCsafApiFilter;
 }
 
+/**
+ * This function runs through the entire intermediate context by calling itself on all sub-elements.
+ * Arguments are searched for because arguments are the query parameters of the front-end user, 
+ * i.e. they are required for the database query.
+ * @param {actual intermediate context tree node} intermediateObject 
+ * @returns all found arguments found in the context
+ */
 function getSearchArguments(intermediateObject){
     var arguments = [];
 
@@ -301,7 +308,7 @@ function getSearchArguments(intermediateObject){
         let i = 0;
         while (i < intermediateObject.subElements.length){
             if(!intermediateObject.subElements[i]){
-                logger.log("intermediate", "This case should not happen. Sub element of intermideate object does not exist.");
+                logger.log("intermediate", "This case should not exist. Sub element of intermideate object does not exist.");
             }
             var temp = getSearchArguments(intermediateObject.subElements[i]);
             let j = 0;

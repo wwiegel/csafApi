@@ -31,7 +31,7 @@ module.exports = {
         host: `localhost`,
         port: "9200",
         user: "elastic",
-        password: "***",
+        password: "40f=RlDDqxldfx-fDv-9",
         maxPreQuerySize: 10000,
         logFile: "./csaf_api/logs/elasticsearch.log"
     },

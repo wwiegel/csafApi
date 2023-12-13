@@ -2,6 +2,7 @@ const config = require("../../config");
 const errors = require("../../data/error_messages");
 const { csafDocument } = require("../../resolvers");
 const { ElasticSearchClient } = require('./elasticsearchclient');
+const logger = require("../../logger");
 
 class connector {
     constructor(){
